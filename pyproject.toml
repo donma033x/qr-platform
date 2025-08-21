@@ -1,0 +1,19 @@
+[project]
+name = "qr-platform"
+version = "1.0.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.111.0",
+    "uvicorn>=0.29.0",
+    "qrcode>=7.4.2",
+    "pillow>=10.3.0",
+    "opencv-python>=4.10.0",  # 用于 QR 码解码
+    "easyocr>=1.7.1",
+    "slowapi>=0.1.9",
+    "jinja2>=3.1.4",
+    "aiofiles>=23.2.1",
+    "python-multipart>=0.0.9"
+]
+
+[tool.uv]
+# 无需额外配置

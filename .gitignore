@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv/
+logs.db
+*.tar
+*.png
+*.jpg
+*.json
+*.csv

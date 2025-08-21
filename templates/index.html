@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二维码平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body { background: linear-gradient(to right, #0f0c29, #302b63, #24243e); color: white; font-family: 'Roboto', sans-serif; }
+        .tech-glow { box-shadow: 0 0 20px rgba(0, 255, 255, 0.5); }
+        .neon-text { text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff; }
+        #dark-toggle { position: fixed; top: 10px; right: 10px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+    
+    <h1 class="text-4xl font-bold mb-8 neon-text mt-10 ">二维码／OCR工具</h1>
+    
+    
+    
+    <div class="w-full max-w-5xl bg-gray-900 p-6 rounded-lg mt-8 tech-glow">
+        <h2 class="text-2xl mb-4">生成二维码</h2>
+        <form id="gen-form" class="space-y-4">
+            <textarea id="text" placeholder="输入文本（支持超长文本）" 
+                class="w-full bg-gray-800 text-white p-2 rounded min-h-[200px] overflow-auto"
+                oninput="autoResizeTextarea(this)"></textarea>
+            
+            <div class="flex items-center justify-between flex-wrap gap-4">
+    <!-- 这里是同一行的其他元素 -->
+        <div class="flex items-center">
+          <label><input type="checkbox" id="compress"> 压缩文本以支持更长内容</label>
+        </div>
+        <div class="flex items-center">
+            <input type="color" id="color" value="#000000" class="mr-2">
+            <span>前景色</span>
+        </div>
+        
+        <div class="flex items-center">
+            <input type="color" id="bg_color" value="#FFFFFF" class="mr-2">
+            <span>背景色</span>
+        </div>
+    
+        <div class="flex items-center">
+            <label for="logo" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded cursor-pointer transition-colors">
+                                  上传 Logo
+            </label>
+            <input type="file" id="logo" accept="image/*" class="hidden">
+        </div>
+          <button type="button" onclick="generateQR()" class="bg-blue-500 text-white px-6 py-3 rounded">生成</button>
+        </div>
+        </form>
+        <img id="qr-image" class="mt-4 hidden">
+    </div>
+    
+    <div class="w-full max-w-5xl bg-gray-900 p-6 rounded-lg mt-8 tech-glow">
+        <h2 class="text-2xl mb-4">解码二维码</h2>
+        <form id="dec-form" class="space-y-4 flex items-center justify-between">
+            <input type="file" id="image" accept="image/*">
+            <button type="button" onclick="decodeQR()" class="bg-green-500 text-white px-6 py-3 rounded">解码</button>
+
+        </form>
+        <p id="decoded-text" class="mt-4"></p>
+    </div>
+    
+    <div class="w-full max-w-5xl bg-gray-900 p-6 rounded-lg mt-8 tech-glow">
+        <h2 class="text-2xl mb-4">OCR图像文字</h2>
+        <div class="mb-4">
+            <img id="ocr-preview" class="max-w-full h-auto hidden rounded shadow-md items-center" alt="OCR 图像预览">
+        </div>
+        <form id="ocr-form" class="space-y-4  flex items-center justify-between">
+            <input type="file" id="ocr-image" accept="image/*">
+            <button type="button" onclick="ocrImage()" class="bg-purple-500 text-white px-6 py-3 rounded">识别</button>
+        </form>
+        <p id="ocr-text" class="mt-4"></p>
+    </div>
+    
+    <div class="w-full max-w-5xl bg-gray-900 p-6 rounded-lg mt-8 tech-glow">
+        <h2 class="text-2xl mb-4">API 使用方法</h2>
+        <p>访问 Swagger 文档在 <a href="/docs" class="text-blue-400">/docs</a> 以进行交互式 API 测试。</p>
+        <ul class="list-disc pl-6">
+            <li>POST /generate: 表单数据 - text (字符串, 必填), compress (布尔), color (字符串), bg_color (字符串), logo (文件)。返回 PNG 图像。</li>
+            <li>POST /decode: 表单数据 - image (文件, 必填)。返回 JSON {"decoded": 字符串}。</li>
+            <li>POST /ocr: 表单数据 - image (文件, 必填)。返回 JSON {"text": 字符串}。</li>
+            <li>GET /stats: 返回 JSON 包含 generations, decodings, ocr_extractions, unique_users。</li>
+        </ul>
+    </div>
+    
+<div class="w-full max-w-5xl bg-gray-900 p-6 rounded-lg mt-8 tech-glow">
+    <h2 class="text-2xl mb-4">统计信息</h2>
+    <div class="flex justify-between items-center w-full gap-2">
+        <p class="flex-1 text-center">生成次数: <span class="font-semibold">  {{ stats.generations }}  </span></p>
+        <p class="flex-1 text-center">解码次数: <span class="font-semibold">  {{ stats.decodings }}  </span></p>
+        <p class="flex-1 text-center">识别次数: <span class="font-semibold">  {{ stats.ocr_extractions }}  </span></p>
+        <p class="flex-1 text-center">独立 IP 数: <span class="font-semibold">  {{ stats.unique_users }}  </span></p>
+    </div>
+</div>
+        
+    </div>
+    
+    <div class="footer mt-8 "> <p>© 2023－2025 网警大队 - Don. All rights reserved.</div> 
+    
+    
+    
+    <script>
+        function generateQR() {
+            const formData = new FormData();
+            formData.append('text', document.getElementById('text').value);
+            formData.append('compress', document.getElementById('compress').checked);
+            formData.append('color', document.getElementById('color').value);
+            formData.append('bg_color', document.getElementById('bg_color').value);
+            const logo = document.getElementById('logo').files[0];
+            if (logo) formData.append('logo', logo);
+            
+            axios.post('/generate', formData, { responseType: 'blob' })
+                .then(response => {
+                    const url = URL.createObjectURL(response.data);
+                    const img = document.getElementById('qr-image');
+                    img.src = url;
+                    img.classList.remove('hidden');
+                })
+                .catch(error => alert(error.response.data.detail));
+        }
+        
+        function decodeQR() {
+            const formData = new FormData();
+            const image = document.getElementById('image').files[0];
+            if (!image) return alert('请上传图像');
+            formData.append('image', image);
+            
+            axios.post('/decode', formData)
+                .then(response => {
+                    document.getElementById('decoded-text').innerText = response.data.decoded;
+                })
+                .catch(error => alert(error.response.data.detail));
+        }
+        
+        function ocrImage() {
+            const formData = new FormData();
+            const image = document.getElementById('ocr-image').files[0];
+            if (!image) return alert('请上传图像');
+            formData.append('image', image);
+            
+            axios.post('/ocr', formData)
+                .then(response => {
+                    document.getElementById('ocr-text').innerText = response.data.text;
+                })
+                .catch(error => alert(error.response.data.detail));
+        }
+        
+        document.getElementById('ocr-image').addEventListener('change', (event) => {
+            const preview = document.getElementById('ocr-preview');
+            const file = event.target.files[0];
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+                preview.classList.remove('hidden');
+            } else {
+                preview.classList.add('hidden');
+            }
+        });
+        
+        function autoResizeTextarea(element) {
+            // 重置高度以获取正确的滚动高度
+            element.style.height = 'auto';
+            // 设置高度为内容的滚动高度，不超过最大高度
+            const newHeight = Math.min(element.scrollHeight, 1000); // 300px 最大高度
+            element.style.height = newHeight + 'px';
+        }
+
+        // 初始化页面时触发一次，确保占位符正确显示
+        document.addEventListener('DOMContentLoaded', function() {
+            const textarea = document.getElementById('text');
+            autoResizeTextarea(textarea);
+        });
+        
+        
+        
+    </script>
+</body>
+</html>
